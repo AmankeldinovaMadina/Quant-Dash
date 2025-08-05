@@ -110,13 +110,13 @@ async def get_current_user(
     if user is None:
         raise AuthenticationError("User not found")
 
-    if user.status == UserStatus.SUSPENDED:
+    if user.get("status") == UserStatus.SUSPENDED:
         raise AuthenticationError("Account suspended")
 
-    if user.status == UserStatus.LOCKED:
+    if user.get("status") == UserStatus.LOCKED:
         raise AuthenticationError("Account locked")
 
-    if user.status == UserStatus.PENDING_VERIFICATION:
+    if user.get("status") == UserStatus.PENDING_VERIFICATION:
         raise AuthenticationError("Email verification required")
 
     return user
@@ -128,7 +128,7 @@ async def get_verified_user(current_user: dict = Depends(get_current_user)) -> d
 
     Some endpoints require verified email addresses.
     """
-    if not current_user.is_email_verified:
+    if not current_user.get("is_email_verified"):
         raise AuthenticationError("Email verification required")
 
     return current_user
@@ -143,7 +143,7 @@ def require_role(required_role: UserRole):
     """
 
     async def role_checker(current_user: dict = Depends(get_current_user)) -> dict:
-        user_role = UserRole(current_user.role)
+        user_role = UserRole(current_user.get("role"))
 
         # Role hierarchy: ADMIN > TRADER > VIEWER > PENDING
         role_hierarchy = {
@@ -171,7 +171,7 @@ require_admin = require_role(UserRole.ADMIN)
 require_trader = require_role(UserRole.TRADER)
 
 # Any verified user access
-require_verified = Depends(get_verified_user)
+require_verified = get_verified_user
 
 
 class RateLimiter:

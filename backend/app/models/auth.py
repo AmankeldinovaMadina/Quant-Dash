@@ -21,7 +21,7 @@ from typing import List, Optional
 from pydantic import BaseModel, EmailStr, Field, validator
 
 
-# User Roles 
+# User Roles
 class UserRole(str, Enum):
     """
     User roles with hierarchical permissions.
@@ -127,7 +127,7 @@ class UserResponse(BaseModel):
     last_login: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserProfile(BaseModel):
@@ -145,7 +145,7 @@ class UserProfile(BaseModel):
     locked_until: Optional[datetime]
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PasswordReset(BaseModel):
