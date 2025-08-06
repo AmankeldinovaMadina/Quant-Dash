@@ -63,7 +63,21 @@ class UserLogin(BaseModel):
 
 
 class UserRegister(BaseModel):
-
+    """
+    User registration schema with strong password validation.
+    Fields:
+        - email: User email address (must be valid)
+        - password: User password (must meet enterprise password policy)
+        - confirm_password: Must match password
+        - first_name: User's first name
+        - last_name: User's last name
+    Password requirements:
+        - At least 8 characters
+        - At least one uppercase letter
+        - At least one lowercase letter
+        - At least one digit
+        - At least one special character
+    """
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., min_length=8, max_length=128)
     confirm_password: str = Field(..., min_length=8, max_length=128)
