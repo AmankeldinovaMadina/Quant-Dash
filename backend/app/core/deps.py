@@ -179,20 +179,34 @@ class RateLimiter:
     Rate limiting for authentication endpoints.
 
     Essential for preventing brute force attacks on login endpoints.
+    Uses Redis with sliding window algorithm for distributed rate limiting.
     """
 
     def __init__(self, redis_client=None):
-        # In production, inject Redis client dependency
+        """
+        Initialize rate limiter with Redis client.
+        
+        Args:
+            redis_client: Redis client instance. If None, rate limiting is disabled
+                         (useful for development without Redis).
+        """
         self.redis_client = redis_client
 
     async def check_rate_limit(self, key: str, limit: int, window_seconds: int) -> bool:
         """
-        Check if rate limit is exceeded.
+        Check if rate limit is exceeded using sliding window algorithm.
 
-        Uses sliding window with Redis for distributed rate limiting.
+        Args:
+            key: Unique identifier for the rate limit (e.g., IP address)
+            limit: Maximum number of requests allowed in the window
+            window_seconds: Time window in seconds
+
+        Returns:
+            True if request is allowed, False if rate limit exceeded
         """
         if not self.redis_client:
             # For development without Redis, allow all requests
+            # In production, this should log a warning
             return True
 
         try:
@@ -208,23 +222,51 @@ class RateLimiter:
             # Add current request
             pipeline.zadd(key, {str(current_time): current_time})
 
-            # Set expiry on the key
-            pipeline.expire(key, window_seconds)
+            # Set expiry on the key (cleanup)
+            pipeline.expire(key, window_seconds + 60)  # Extra time for cleanup
 
             results = pipeline.execute()
             current_requests = results[1]
 
             return current_requests < limit
 
-        except Exception:
-            # If Redis fails, allow the request (fail open)
+        except Exception as e:
+            # If Redis fails, allow the request (fail open) but log the error
+            # In production, you might want to use a circuit breaker pattern
+            print(f"Rate limiting error: {e}")
+            return True
             return True
 
 
-rate_limiter = RateLimiter()
+# Redis connection dependency
+def get_redis_client():
+    """
+    Get Redis client for rate limiting.
+    
+    Returns None if Redis is not available (development mode).
+    """
+    try:
+        client = redis.from_url(settings.REDIS_URL, decode_responses=True)
+        # Test connection
+        client.ping()
+        return client
+    except Exception:
+        # Redis not available - return None for development mode
+        return None
 
 
-async def login_rate_limit(request: Request):
+# Rate limiter dependency
+def get_rate_limiter(redis_client=Depends(get_redis_client)) -> RateLimiter:
+    """
+    Get rate limiter with proper Redis client injection.
+    """
+    return RateLimiter(redis_client=redis_client)
+
+
+async def login_rate_limit(
+    request: Request, 
+    rate_limiter: RateLimiter = Depends(get_rate_limiter)
+):
     """
     Rate limit for login attempts.
 
@@ -241,7 +283,10 @@ async def login_rate_limit(request: Request):
         raise RateLimitError("Too many login attempts. Please try again later.")
 
 
-async def registration_rate_limit(request: Request):
+async def registration_rate_limit(
+    request: Request,
+    rate_limiter: RateLimiter = Depends(get_rate_limiter)
+):
     """
     Rate limit for registration attempts.
 
