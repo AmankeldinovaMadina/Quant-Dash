@@ -15,6 +15,9 @@ Design principles:
 - Comprehensive input validation
 """
 
+import logging
+import traceback
+
 from app.core.deps import (
     get_current_user,
     login_rate_limit,
@@ -35,6 +38,9 @@ from app.models.auth import (
 from app.services.user import UserService
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -67,7 +73,14 @@ async def register(user_data: UserRegister, user_service: UserService = Depends(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
-        # Log the actual error but don't expose it
+        # Log the actual error with full context for debugging
+        logger.error(
+            "Registration failed for email: %s. Error: %s. Traceback: %s",
+            user_data.email,
+            str(e),
+            traceback.format_exc(),
+            extra={"endpoint": "register", "user_email": user_data.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Registration failed. Please try again.",
@@ -81,7 +94,7 @@ async def register(user_data: UserRegister, user_service: UserService = Depends(
     summary="User login",
     description="Authenticate user and return access and refresh tokens",
 )
-async def login(login_data: UserLogin, user_service: UserService = Depends()):
+async def login(login_data: UserLogin, request: Request, user_service: UserService = Depends()):
     """
     Authenticate user and return tokens.
 
@@ -97,6 +110,18 @@ async def login(login_data: UserLogin, user_service: UserService = Depends()):
         user = await user_service.authenticate_user(login_data)
 
         if not user:
+            # Log authentication failure for security monitoring
+            logger.warning(
+                "Authentication failure for email: %s from IP: %s",
+                login_data.email,
+                request.client.host,
+                extra={
+                    "event_type": "authentication_failure",
+                    "email": login_data.email,
+                    "client_ip": request.client.host,
+                    "user_agent": request.headers.get("user-agent", "")[:100]
+                }
+            )
             # Generic error message to prevent user enumeration
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -110,6 +135,14 @@ async def login(login_data: UserLogin, user_service: UserService = Depends()):
         # Handle specific errors like account lockout
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception as e:
+        # Log the actual error with context for debugging
+        logger.error(
+            "Login failed for email: %s. Error: %s. Traceback: %s",
+            login_data.email,
+            str(e),
+            traceback.format_exc(),
+            extra={"endpoint": "login", "user_email": login_data.email}
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Login failed. Please try again.",
@@ -141,6 +174,13 @@ async def refresh_token(
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(e))
     except Exception as e:
+        # Log the actual error with context for debugging
+        logger.error(
+            "Token refresh failed. Error: %s. Traceback: %s",
+            str(e),
+            traceback.format_exc(),
+            extra={"endpoint": "refresh_token"}
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Token refresh failed. Please login again.",
@@ -175,6 +215,14 @@ async def verify_email(
         return {"message": "Email verified successfully"}
 
     except Exception as e:
+        # Log the actual error with context for debugging
+        logger.error(
+            "Email verification failed for token: %s. Error: %s. Traceback: %s",
+            verification_data.token[:20] + "...",  # Log partial token for debugging
+            str(e),
+            traceback.format_exc(),
+            extra={"endpoint": "verify_email"}
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Email verification failed. Please try again.",
@@ -205,7 +253,15 @@ async def request_password_reset(
         return {"message": "If the email exists, a password reset link has been sent"}
 
     except Exception as e:
-        # Still return success message for security
+        # Log the actual error but still return success message for security
+        logger.error(
+            "Password reset failed for email: %s. Error: %s. Traceback: %s",
+            reset_data.email,
+            str(e),
+            traceback.format_exc(),
+            extra={"endpoint": "request_password_reset", "user_email": reset_data.email}
+        )
+        # Still return success message to prevent email enumeration
         return {"message": "If the email exists, a password reset link has been sent"}
 
 

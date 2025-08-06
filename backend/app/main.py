@@ -1,13 +1,13 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import api_router
 from app.core.config import settings
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
     title="Quant-Dash API",
     description="A quantitative trading dashboard API",
     version="1.0.0",
-    openapi_url=f"{settings.API_V1_STR}/openapi.json"
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )
 
 # Set all CORS enabled origins
@@ -33,5 +33,5 @@ async def health_check():
     return {
         "status": "healthy",
         "message": "Quant-Dash Backend API is running",
-        "version": "1.0.0"
+        "version": "1.0.0",
     }
