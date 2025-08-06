@@ -204,6 +204,119 @@ def test_user_models():
         return False
 
 
+def test_functional_authentication():
+    """Test the full authentication flow with functional database."""
+    print("\n🔄 Testing Functional Authentication Flow...")
+    
+    try:
+        from app.services.user import UserService
+        from app.models.auth import UserRegister, UserLogin
+        import asyncio
+        
+        # Create user service instance
+        user_service = UserService()
+        
+        async def test_flow():
+            # Test user registration
+            user_data = UserRegister(
+                email="test@example.com",
+                password="TestPassword123!",
+                confirm_password="TestPassword123!",
+                first_name="John",
+                last_name="Doe"
+            )
+            
+            # Register user
+            registered_user = await user_service.register_user(user_data)
+            print(f"✅ User registered: {registered_user['email']} (ID: {registered_user['id']})")
+            
+            # Try to register same email again (should fail)
+            try:
+                await user_service.register_user(user_data)
+                print("❌ Duplicate registration should have failed!")
+                return False
+            except ValueError as e:
+                print(f"✅ Duplicate registration correctly rejected: {e}")
+            
+            # Test login with correct credentials
+            login_data = UserLogin(email="test@example.com", password="TestPassword123!")
+            user = await user_service.authenticate_user(login_data)
+            
+            if user:
+                print(f"✅ Login successful for: {user['email']}")
+                
+                # Test token creation
+                tokens = await user_service.create_tokens(user)
+                print(f"✅ Tokens created: access_token length={len(tokens.access_token)}")
+                
+                # Test token refresh
+                new_tokens = await user_service.refresh_access_token(tokens.refresh_token)
+                print(f"✅ Token refresh successful")
+                
+            else:
+                print("❌ Login failed with correct credentials!")
+                return False
+            
+            # Test login with wrong password
+            wrong_login = UserLogin(email="test@example.com", password="WrongPassword")
+            wrong_user = await user_service.authenticate_user(wrong_login)
+            
+            if wrong_user is None:
+                print("✅ Login correctly rejected with wrong password")
+            else:
+                print("❌ Login should have failed with wrong password!")
+                return False
+            
+            # Test email verification
+            from app.core.security import security
+            verification_token = security.create_email_verification_token("test@example.com")
+            verification_result = await user_service.verify_email(verification_token)
+            
+            if verification_result:
+                print("✅ Email verification successful")
+            else:
+                print("❌ Email verification failed!")
+                return False
+            
+            # Test password reset
+            reset_result = await user_service.initiate_password_reset("test@example.com")
+            if reset_result:
+                print("✅ Password reset initiated")
+            else:
+                print("❌ Password reset initiation failed!")
+                return False
+            
+            # Test password reset with actual token
+            reset_token = security.create_password_reset_token("test@example.com")
+            reset_confirm_result = await user_service.confirm_password_reset(reset_token, "NewPassword123!")
+            
+            if reset_confirm_result:
+                print("✅ Password reset confirmed")
+            else:
+                print("❌ Password reset confirmation failed!")
+                return False
+            
+            # Get debug info
+            debug_info = await user_service.get_all_users()
+            print(f"✅ Database contains {debug_info['total_users']} users")
+            
+            return True
+        
+        # Run the async test
+        result = asyncio.run(test_flow())
+        
+        if result:
+            print("✅ Functional authentication test passed!")
+        else:
+            print("❌ Functional authentication test failed!")
+        
+        return result
+        
+    except Exception as e:
+        print(f"❌ Functional authentication test failed with exception: {e}")
+        return False
+
+
 def test_basic_app_structure():
     """Test basic FastAPI app structure."""
     print("\n🚀 Testing FastAPI App Structure...")
@@ -234,6 +347,7 @@ def main():
         test_jwt_tokens,
         test_password_reset_tokens,
         test_user_models,
+        test_functional_authentication,
         test_basic_app_structure,
     ]
 

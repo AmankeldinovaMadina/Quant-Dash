@@ -50,7 +50,6 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-    PROJECT_NAME: str = "Quant-Dash"
 
     # Database
     POSTGRES_SERVER: str = "localhost"

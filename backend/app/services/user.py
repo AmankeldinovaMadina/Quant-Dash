@@ -37,13 +37,17 @@ class UserService:
     """
     User service for authentication and user management.
 
-    In production, this would interact with a database ORM.
-    For now, we'll use placeholder methods that show the structure.
+    For development/testing, this uses an in-memory database.
+    In production, this would interact with a real database ORM.
     """
 
     def __init__(self):
+        # In-memory database for development/testing
         # In production, inject database dependency here
-        pass
+        self._users = {}  # email -> user_data
+        self._users_by_id = {}  # id -> user_data
+        self._reset_tokens = {}  # user_id -> {token_hash, expires_at}
+        self._next_user_id = 1
 
     async def register_user(self, user_data: UserRegister) -> Dict[str, Any]:
         """
@@ -79,20 +83,25 @@ class UserService:
             "locked_until": None,
         }
 
-        # Save to database (placeholder)
-        # user = await self.db.create_user(user_record)
+        # Save to database (in-memory implementation for development)
+        user_id = self._next_user_id
+        self._next_user_id += 1
+        
+        user_record["id"] = user_id
+        self._users[user_data.email] = user_record
+        self._users_by_id[user_id] = user_record
 
         # Send verification email
         await self.send_verification_email(user_data.email)
 
         # Return user data (exclude sensitive information)
         return {
-            "id": 1,  # Placeholder
+            "id": user_id,
             "email": user_data.email,
             "first_name": user_data.first_name,
             "last_name": user_data.last_name,
-            "role": UserRole.PENDING,
-            "status": UserStatus.PENDING_VERIFICATION,
+            "role": UserRole.PENDING.value,
+            "status": UserStatus.PENDING_VERIFICATION.value,
             "is_email_verified": False,
             "created_at": datetime.utcnow(),
         }
@@ -228,7 +237,9 @@ class UserService:
         If you didn't create this account, please ignore this email.
         """
 
-        return await self.send_email(email, subject, body)
+        # Attempt to send email, but don't fail registration if email fails
+        await self.send_email(email, subject, body)
+        return True
 
     async def initiate_password_reset(self, email: str) -> bool:
         """
@@ -262,7 +273,10 @@ class UserService:
         If you didn't request this reset, please ignore this email.
         """
 
-        return await self.send_email(email, subject, body)
+        # Attempt to send email, but always return True for security
+        # (Don't reveal whether email sending succeeded/failed)
+        await self.send_email(email, subject, body)
+        return True
 
     async def confirm_password_reset(self, token: str, new_password: str) -> bool:
         """
@@ -302,75 +316,123 @@ class UserService:
         
         return True
 
-    # Placeholder database methods (implement with actual ORM)
+    # Database methods with in-memory implementation for development
     async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email address."""
-        # Placeholder - implement with database query
-        return None
+        return self._users.get(email)
 
     async def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Get user by ID."""
-        # Placeholder - implement with database query
-        return None
+        return self._users_by_id.get(user_id)
 
     async def increment_login_attempts(self, user_id: int) -> None:
         """Increment failed login attempts counter."""
-        # Placeholder - implement with database update
-        pass
+        user = self._users_by_id.get(user_id)
+        if user:
+            user["login_attempts"] = user.get("login_attempts", 0) + 1
+            # Lock account after 5 failed attempts
+            if user["login_attempts"] >= 5:
+                user["locked_until"] = datetime.utcnow() + timedelta(minutes=30)
+            user["updated_at"] = datetime.utcnow()
 
     async def reset_login_attempts(self, user_id: int) -> None:
         """Reset login attempts counter."""
-        # Placeholder - implement with database update
-        pass
+        user = self._users_by_id.get(user_id)
+        if user:
+            user["login_attempts"] = 0
+            user["locked_until"] = None
+            user["updated_at"] = datetime.utcnow()
 
     async def update_last_login(self, user_id: int) -> None:
         """Update last login timestamp."""
-        # Placeholder - implement with database update
-        pass
+        user = self._users_by_id.get(user_id)
+        if user:
+            user["last_login"] = datetime.utcnow()
+            user["updated_at"] = datetime.utcnow()
 
     async def update_user_verification(self, user_id: int, verified: bool) -> None:
         """Update user email verification status."""
-        # Placeholder - implement with database update
-        pass
+        user = self._users_by_id.get(user_id)
+        if user:
+            user["is_email_verified"] = verified
+            user["updated_at"] = datetime.utcnow()
+            # Also update in email index
+            email = user["email"]
+            if email in self._users:
+                self._users[email]["is_email_verified"] = verified
+                self._users[email]["updated_at"] = datetime.utcnow()
 
     async def update_user_role(self, user_id: int, role: UserRole) -> None:
         """Update user role."""
-        # Placeholder - implement with database update
-        pass
+        user = self._users_by_id.get(user_id)
+        if user:
+            user["role"] = role.value
+            user["updated_at"] = datetime.utcnow()
+            # Also update in email index
+            email = user["email"]
+            if email in self._users:
+                self._users[email]["role"] = role.value
+                self._users[email]["updated_at"] = datetime.utcnow()
 
     async def update_user_password(self, user_id: int, password_hash: str) -> None:
         """Update user password hash."""
-        # Placeholder - implement with database update
-        # In production: UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2
-        pass
+        user = self._users_by_id.get(user_id)
+        if user:
+            user["password_hash"] = password_hash
+            user["updated_at"] = datetime.utcnow()
+            # Also update in email index
+            email = user["email"]
+            if email in self._users:
+                self._users[email]["password_hash"] = password_hash
+                self._users[email]["updated_at"] = datetime.utcnow()
 
     async def store_reset_token(self, user_id: int, token_hash: str, expire_at: datetime) -> None:
         """Store password reset token with expiration."""
-        # Placeholder - implement with database insert
-        # In production: 
-        # INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at)
-        # VALUES ($1, $2, $3, NOW())
-        # ON CONFLICT (user_id) DO UPDATE SET 
-        #   token_hash = EXCLUDED.token_hash,
-        #   expires_at = EXCLUDED.expires_at,
-        #   created_at = NOW()
-        pass
+        self._reset_tokens[user_id] = {
+            "token_hash": token_hash,
+            "expires_at": expire_at,
+            "created_at": datetime.utcnow()
+        }
 
     async def invalidate_reset_tokens(self, user_id: int) -> None:
         """Invalidate all reset tokens for a user."""
-        # Placeholder - implement with database delete
-        # In production: DELETE FROM password_reset_tokens WHERE user_id = $1
-        pass
+        if user_id in self._reset_tokens:
+            del self._reset_tokens[user_id]
 
     async def is_reset_token_valid(self, user_id: int, token_hash: str) -> bool:
         """Check if reset token is valid and not expired."""
-        # Placeholder - implement with database query
-        # In production:
-        # SELECT EXISTS(
-        #   SELECT 1 FROM password_reset_tokens 
-        #   WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW()
-        # )
-        return True
+        token_data = self._reset_tokens.get(user_id)
+        if not token_data:
+            return False
+        
+            return (
+            token_data["token_hash"] == token_hash and
+            token_data["expires_at"] > datetime.utcnow()
+        )
+
+    # Development/debugging methods
+    async def get_all_users(self) -> Dict[str, Any]:
+        """Get all users for debugging (development only)."""
+        # Remove sensitive data for debugging
+        safe_users = {}
+        for email, user in self._users.items():
+            safe_user = user.copy()
+            if "password_hash" in safe_user:
+                safe_user["password_hash"] = "[REDACTED]"
+            safe_users[email] = safe_user
+        
+        return {
+            "total_users": len(self._users),
+            "users": safe_users,
+            "reset_tokens_count": len(self._reset_tokens)
+        }
+
+    async def clear_all_data(self) -> None:
+        """Clear all data (development/testing only)."""
+        self._users.clear()
+        self._users_by_id.clear()
+        self._reset_tokens.clear()
+        self._next_user_id = 1
 
     async def send_email(self, to_email: str, subject: str, body: str) -> bool:
         """
@@ -378,30 +440,39 @@ class UserService:
 
         In production, use a proper email service like SendGrid or AWS SES.
         """
-        if not all([settings.SMTP_HOST, settings.SMTP_USER, settings.SMTP_PASSWORD]):
-            # Email not configured - log only non-sensitive metadata for development
-            print(f"Email to {to_email}: {subject} [body redacted]")
+        # Check if email is properly configured
+        email_configured = all([
+            getattr(settings, 'SMTP_HOST', None),
+            getattr(settings, 'SMTP_USER', None), 
+            getattr(settings, 'SMTP_PASSWORD', None)
+        ])
+        
+        if not email_configured:
+            # Email not configured - log the email content for development
+            print(f"📧 Email would be sent to {to_email}: {subject}")
+            print(f"📧 Body: {body[:100]}..." if len(body) > 100 else f"📧 Body: {body}")
             return True
 
         try:
             msg = MIMEMultipart()
-            msg["From"] = settings.EMAILS_FROM_EMAIL
+            msg["From"] = getattr(settings, 'EMAILS_FROM_EMAIL', settings.SMTP_USER)
             msg["To"] = to_email
             msg["Subject"] = subject
 
             msg.attach(MIMEText(body, "plain"))
 
-            server = smtplib.SMTP(settings.SMTP_HOST, settings.SMTP_PORT)
-            if settings.SMTP_TLS:
+            server = smtplib.SMTP(settings.SMTP_HOST, getattr(settings, 'SMTP_PORT', 587))
+            if getattr(settings, 'SMTP_TLS', True):
                 server.starttls()
 
             server.login(settings.SMTP_USER, settings.SMTP_PASSWORD)
             server.send_message(msg)
             server.quit()
 
+            print(f"📧 Email sent successfully to {to_email}")
             return True
 
         except Exception as e:
-            # Log error in production
-            print(f"Email sending failed: {e}")
+            # Log error but don't fail the operation
+            print(f"📧 Email sending failed to {to_email}: {e}")
             return False

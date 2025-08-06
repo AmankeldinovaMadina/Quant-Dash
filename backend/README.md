@@ -18,7 +18,6 @@ backend/
 │   └── main.py              # FastAPI application
 ├── requirements.txt          # Python dependencies
 ├── start.sh                 # Startup script
-├── venv/                    # Python virtual environment
 └── .env.example             # Environment variables example
 ```
 
@@ -28,9 +27,6 @@ backend/
 - Python 3.8+ installed on your system
 - pip (Python package installer)
 
-### Virtual Environment Setup
-
-This project uses a Python virtual environment to manage dependencies and isolate the project environment. The virtual environment is already included in the repository as `venv/`.
 
 #### Using the existing virtual environment (Recommended)
 ```bash
@@ -40,7 +36,7 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 # Verify activation (you should see (venv) in your prompt)
 which python  # Should point to venv/bin/python
 
-# Install/update dependencies if needed
+# Install dependencies if needed
 pip install -r requirements.txt
 ```
 
