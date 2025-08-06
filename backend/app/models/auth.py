@@ -18,7 +18,7 @@ from datetime import datetime
 from enum import Enum
 from typing import List, Optional
 
-from pydantic import BaseModel, EmailStr, Field, validator
+from pydantic import BaseModel, EmailStr, Field, validator, model_validator
 
 
 # User Roles
@@ -99,12 +99,12 @@ class UserRegister(BaseModel):
 
         return v
 
-    @validator("confirm_password")
-    def passwords_match(cls, v, values):
+    @model_validator(mode='after')
+    def passwords_match(self) -> 'UserRegister':
         """Ensure password confirmation matches."""
-        if "password" in values and v != values["password"]:
+        if self.password != self.confirm_password:
             raise ValueError("Passwords do not match")
-        return v
+        return self
 
 
 class TokenResponse(BaseModel):
@@ -162,11 +162,12 @@ class PasswordResetConfirm(BaseModel):
     def validate_password_strength(cls, v):
         return UserRegister.validate_password_strength(v)
 
-    @validator("confirm_password")
-    def passwords_match(cls, v, values):
-        if "new_password" in values and v != values["new_password"]:
+    @model_validator(mode='after')
+    def passwords_match(self) -> 'PasswordResetConfirm':
+        """Ensure password confirmation matches."""
+        if self.new_password != self.confirm_password:
             raise ValueError("Passwords do not match")
-        return v
+        return self
 
 
 class EmailVerification(BaseModel):

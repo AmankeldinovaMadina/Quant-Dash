@@ -185,7 +185,7 @@ class RateLimiter:
     def __init__(self, redis_client=None):
         """
         Initialize rate limiter with Redis client.
-        
+
         Args:
             redis_client: Redis client instance. If None, rate limiting is disabled
                          (useful for development without Redis).
@@ -242,7 +242,7 @@ class RateLimiter:
 def get_redis_client():
     """
     Get Redis client for rate limiting.
-    
+
     Returns None if Redis is not available (development mode).
     """
     try:
@@ -264,8 +264,7 @@ def get_rate_limiter(redis_client=Depends(get_redis_client)) -> RateLimiter:
 
 
 async def login_rate_limit(
-    request: Request, 
-    rate_limiter: RateLimiter = Depends(get_rate_limiter)
+    request: Request, rate_limiter: RateLimiter = Depends(get_rate_limiter)
 ):
     """
     Rate limit for login attempts.
@@ -284,8 +283,7 @@ async def login_rate_limit(
 
 
 async def registration_rate_limit(
-    request: Request,
-    rate_limiter: RateLimiter = Depends(get_rate_limiter)
+    request: Request, rate_limiter: RateLimiter = Depends(get_rate_limiter)
 ):
     """
     Rate limit for registration attempts.
