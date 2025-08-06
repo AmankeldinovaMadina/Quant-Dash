@@ -14,6 +14,7 @@ Why dependencies:
 - Easy testing and mocking
 """
 
+import logging
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -24,6 +25,9 @@ from app.models.auth import UserRole, UserStatus
 from app.services.user import UserService
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+
+# Configure logger for security events
+logger = logging.getLogger(__name__)
 
 # Security scheme for OpenAPI documentation
 security_scheme = HTTPBearer()
@@ -179,17 +183,25 @@ class RateLimiter:
 
     Essential for preventing brute force attacks on login endpoints.
     Uses Redis with sliding window algorithm for distributed rate limiting.
+    
+    Security considerations:
+    - For financial applications, rate limiting failures should "fail closed"
+    - Critical security endpoints reject requests when rate limiting is unavailable
+    - Non-critical endpoints can "fail open" for availability
     """
 
-    def __init__(self, redis_client=None):
+    def __init__(self, redis_client=None, fail_open_on_error=False):
         """
         Initialize rate limiter with Redis client.
 
         Args:
-            redis_client: Redis client instance. If None, rate limiting is disabled
-                         (useful for development without Redis).
+            redis_client: Redis client instance. If None, rate limiting behavior
+                         depends on fail_open_on_error setting.
+            fail_open_on_error: If True, allow requests when Redis is unavailable.
+                               If False, reject requests for security (fail closed).
         """
         self.redis_client = redis_client
+        self.fail_open_on_error = fail_open_on_error
 
     async def check_rate_limit(self, key: str, limit: int, window_seconds: int) -> bool:
         """
@@ -202,11 +214,26 @@ class RateLimiter:
 
         Returns:
             True if request is allowed, False if rate limit exceeded
+
+        Raises:
+            HTTPException: If Redis is unavailable and fail_open_on_error is False
         """
         if not self.redis_client:
-            # For development without Redis, allow all requests
-            # In production, this should log a warning
-            return True
+            if self.fail_open_on_error:
+                logger.warning(
+                    "Rate limiting disabled - Redis client unavailable. "
+                    "Allowing request due to fail_open_on_error=True."
+                )
+                return True
+            else:
+                logger.critical(
+                    "SECURITY ALERT: Rate limiting unavailable - Redis client not configured. "
+                    "Rejecting request for security (fail closed). "
+                    "This indicates a critical infrastructure issue that must be resolved immediately."
+                )
+                raise RateLimitError(
+                    "Rate limiting service unavailable. Request rejected for security."
+                )
 
         try:
             current_time = datetime.utcnow().timestamp()
@@ -230,10 +257,25 @@ class RateLimiter:
             return current_requests < limit
 
         except Exception as e:
-            # If Redis fails, allow the request (fail open) but log the error
-            # In production, you might want to use a circuit breaker pattern
-            print(f"Rate limiting error: {e}")
-            return True
+            # Redis operation failed - decide based on fail_open_on_error setting
+            if self.fail_open_on_error:
+                logger.error(
+                    "Rate limiting error (allowing request due to fail_open_on_error=True): %s. "
+                    "Key: %s, Limit: %d, Window: %ds",
+                    str(e), key, limit, window_seconds
+                )
+                return True
+            else:
+                logger.critical(
+                    "SECURITY ALERT: Rate limiting failed - Redis operation error. "
+                    "Rejecting request for security (fail closed). "
+                    "Error: %s, Key: %s, Limit: %d, Window: %ds. "
+                    "This indicates a critical infrastructure issue that must be resolved immediately.",
+                    str(e), key, limit, window_seconds
+                )
+                raise RateLimitError(
+                    "Rate limiting service error. Request rejected for security."
+                )
 
 
 # Redis connection dependency
@@ -253,16 +295,42 @@ def get_redis_client():
         return None
 
 
-# Rate limiter dependency
+# Rate limiter dependencies with different security levels
+def get_rate_limiter_strict(redis_client=Depends(get_redis_client)) -> RateLimiter:
+    """
+    Get rate limiter for security-critical endpoints (fail closed).
+    
+    Used for login, registration, and other authentication endpoints.
+    Rejects requests if Redis is unavailable to maintain security.
+    """
+    return RateLimiter(redis_client=redis_client, fail_open_on_error=False)
+
+
+def get_rate_limiter_permissive(redis_client=Depends(get_redis_client)) -> RateLimiter:
+    """
+    Get rate limiter for non-critical endpoints (fail open).
+    
+    Used for general API endpoints where availability is more important
+    than strict rate limiting.
+    """
+    # Use configuration setting, but default to fail open for non-critical endpoints
+    fail_open = getattr(settings, 'RATE_LIMIT_FAIL_OPEN', True)
+    return RateLimiter(redis_client=redis_client, fail_open_on_error=fail_open)
+
+
+# Legacy function for backward compatibility - defaults to strict mode
 def get_rate_limiter(redis_client=Depends(get_redis_client)) -> RateLimiter:
     """
-    Get rate limiter with proper Redis client injection.
+    Get rate limiter with default security settings.
+    
+    For financial applications, defaults to strict mode (fail closed).
     """
-    return RateLimiter(redis_client=redis_client)
+    fail_open = False if settings.RATE_LIMIT_STRICT_MODE else settings.RATE_LIMIT_FAIL_OPEN
+    return RateLimiter(redis_client=redis_client, fail_open_on_error=fail_open)
 
 
 async def login_rate_limit(
-    request: Request, rate_limiter: RateLimiter = Depends(get_rate_limiter)
+    request: Request, rate_limiter: RateLimiter = Depends(get_rate_limiter_strict)
 ):
     """
     Rate limit for login attempts.
@@ -281,7 +349,7 @@ async def login_rate_limit(
 
 
 async def registration_rate_limit(
-    request: Request, rate_limiter: RateLimiter = Depends(get_rate_limiter)
+    request: Request, rate_limiter: RateLimiter = Depends(get_rate_limiter_strict)
 ):
     """
     Rate limit for registration attempts.
