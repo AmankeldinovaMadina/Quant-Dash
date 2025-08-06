@@ -234,7 +234,6 @@ class RateLimiter:
             # In production, you might want to use a circuit breaker pattern
             print(f"Rate limiting error: {e}")
             return True
-            return True
 
 
 # Redis connection dependency
