@@ -17,7 +17,7 @@ from datetime import datetime
 
 # Add the app directory to Python path
 sys.path.append(
-    "/Users/madinaamankeldinova/Desktop/personal_project/quant-dash/backend"
+    os.path.dirname(os.path.abspath(__file__))
 )
 
 try:
