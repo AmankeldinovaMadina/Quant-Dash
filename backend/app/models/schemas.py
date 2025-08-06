@@ -20,7 +20,7 @@ class Stock(StockBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class StockCreate(StockBase):
@@ -50,7 +50,7 @@ class Position(PositionBase):
     total_gain: float = Field(..., description="Total gain/loss")
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PositionCreate(PositionBase):
@@ -70,7 +70,7 @@ class Portfolio(PortfolioBase):
     positions: List[Position] = []
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class PortfolioCreate(BaseModel):
@@ -89,7 +89,7 @@ class User(UserBase):
     updated_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class UserCreate(UserBase):
@@ -117,7 +117,7 @@ class MarketData(MarketDataBase):
     created_at: datetime
 
     class Config:
-        orm_mode = True
+        from_attributes = True
 
 
 class MarketDataCreate(MarketDataBase):

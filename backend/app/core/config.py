@@ -1,14 +1,36 @@
 import secrets
 from typing import Any, Dict, List, Optional, Union
 
-from pydantic import AnyHttpUrl, BaseSettings, EmailStr, validator
+from pydantic import AnyHttpUrl, EmailStr, validator
+from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
-    # 60 minutes * 24 hours * 8 days = 8 days
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 8
+    SECRET_KEY: str
+    PROJECT_NAME: str = "Quant-Dash"
+    DEBUG: bool = False  # Enable debug mode for development
+
+    # JWT Configuration - Critical for financial platform security
+    # Short access token = better security, refresh token = better UX
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = (
+        15  # 15 minutes - industry standard for sensitive apps
+    )
+    REFRESH_TOKEN_EXPIRE_DAYS: int = 7  # 7 days - balance between security and UX
+
+    # JWT Algorithm - RS256 for production, HS256 for development
+    JWT_ALGORITHM: str = "HS256"
+    JWT_AUDIENCE: str = "quant-dash:auth"
+    JWT_ISSUER: str = "quant-dash"
+
+    # Password Security - Enterprise grade
+    PWD_CONTEXT_SCHEMES: List[str] = ["bcrypt"]
+    PWD_CONTEXT_DEPRECATED: str = "auto"
+
+    # Account Security
+    MAX_LOGIN_ATTEMPTS: int = 5
+    ACCOUNT_LOCKOUT_DURATION_MINUTES: int = 30
+    EMAIL_VERIFICATION_EXPIRE_HOURS: int = 24
     SERVER_NAME: str = "localhost"
     SERVER_HOST: AnyHttpUrl = "http://localhost"
     # BACKEND_CORS_ORIGINS is a JSON-formatted list of origins
@@ -28,8 +50,7 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-    PROJECT_NAME: str = "Quant-Dash"
-    
+
     # Database
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
@@ -57,8 +78,12 @@ class Settings(BaseSettings):
     POLYGON_API_KEY: Optional[str] = None
     IEX_CLOUD_API_KEY: Optional[str] = None
 
-    # Redis (for caching)
+    # Redis (for caching and rate limiting)
     REDIS_URL: str = "redis://localhost:6379"
+    
+    # Rate Limiting Security Configuration
+    RATE_LIMIT_FAIL_OPEN: bool = False  # True = fail open (allow requests), False = fail closed (reject requests)
+    RATE_LIMIT_STRICT_MODE: bool = True  # Extra strict mode for financial applications
 
     class Config:
         case_sensitive = True

@@ -10,9 +10,9 @@
 <!-- ## Getting Started -->
 
 
-<!-- 
+
 ## Technologies
 
-- Backend: Go with Gorilla Mux
+- Backend: Python FastAPI
 - Frontend: React with TypeScript
-- ML: (To be determined) -->
+<!-- - ML:  -->
