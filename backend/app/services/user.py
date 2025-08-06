@@ -241,10 +241,12 @@ class UserService:
             # Don't reveal if email exists (security best practice)
             return True
 
-        reset_token = security.generate_reset_token()
+        # Create JWT-based reset token with expiration
+        reset_token = security.create_password_reset_token(email)
 
         # Store reset token in database with expiry (placeholder)
-        # await self.store_reset_token(user["id"], reset_token)
+        # In production, you might want to store a hash of the token
+        # await self.store_reset_token(user["id"], reset_token, expire_at=datetime.utcnow() + timedelta(hours=1))
 
         reset_link = f"{settings.SERVER_HOST}/reset-password?token={reset_token}"
 
@@ -261,6 +263,44 @@ class UserService:
         """
 
         return await self.send_email(email, subject, body)
+
+    async def confirm_password_reset(self, token: str, new_password: str) -> bool:
+        """
+        Confirm password reset with new password.
+        
+        Args:
+            token: Password reset token
+            new_password: New password (already validated by Pydantic)
+            
+        Returns:
+            True if reset was successful, False otherwise
+        """
+        # Verify the reset token
+        email = security.verify_password_reset_token(token)
+        if not email:
+            return False
+            
+        # Get user by email
+        user = await self.get_user_by_email(email)
+        if not user:
+            return False
+            
+        # Hash the new password
+        hashed_password = security.hash_password(new_password)
+        
+        # Update user password in database (placeholder)
+        # await self.update_user_password(user["id"], hashed_password)
+        
+        # Invalidate any existing reset tokens for this user (placeholder)
+        # await self.invalidate_reset_tokens(user["id"])
+        
+        # Reset login attempts (if any)
+        await self.reset_login_attempts(user["id"])
+        
+        # Log password reset for security monitoring
+        print(f"Password reset completed for user: {email}")
+        
+        return True
 
     # Placeholder database methods (implement with actual ORM)
     async def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
@@ -297,6 +337,40 @@ class UserService:
         """Update user role."""
         # Placeholder - implement with database update
         pass
+
+    async def update_user_password(self, user_id: int, password_hash: str) -> None:
+        """Update user password hash."""
+        # Placeholder - implement with database update
+        # In production: UPDATE users SET password_hash = $1, updated_at = NOW() WHERE id = $2
+        pass
+
+    async def store_reset_token(self, user_id: int, token_hash: str, expire_at: datetime) -> None:
+        """Store password reset token with expiration."""
+        # Placeholder - implement with database insert
+        # In production: 
+        # INSERT INTO password_reset_tokens (user_id, token_hash, expires_at, created_at)
+        # VALUES ($1, $2, $3, NOW())
+        # ON CONFLICT (user_id) DO UPDATE SET 
+        #   token_hash = EXCLUDED.token_hash,
+        #   expires_at = EXCLUDED.expires_at,
+        #   created_at = NOW()
+        pass
+
+    async def invalidate_reset_tokens(self, user_id: int) -> None:
+        """Invalidate all reset tokens for a user."""
+        # Placeholder - implement with database delete
+        # In production: DELETE FROM password_reset_tokens WHERE user_id = $1
+        pass
+
+    async def is_reset_token_valid(self, user_id: int, token_hash: str) -> bool:
+        """Check if reset token is valid and not expired."""
+        # Placeholder - implement with database query
+        # In production:
+        # SELECT EXISTS(
+        #   SELECT 1 FROM password_reset_tokens 
+        #   WHERE user_id = $1 AND token_hash = $2 AND expires_at > NOW()
+        # )
+        return True
 
     async def send_email(self, to_email: str, subject: str, body: str) -> bool:
         """

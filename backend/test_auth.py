@@ -58,6 +58,37 @@ def test_password_hashing():
     return is_valid and not is_invalid
 
 
+def test_password_reset_tokens():
+    """Test password reset token creation and validation."""
+    print("\n🔑 Testing Password Reset Tokens...")
+    
+    email = "test@example.com"
+    
+    # Create password reset token
+    reset_token = security.create_password_reset_token(email)
+    print(f"Password reset token created: {reset_token[:50]}...")
+    
+    # Verify password reset token
+    verified_email = security.verify_password_reset_token(reset_token)
+    print(f"Verified email from token: {verified_email}")
+    
+    # Test invalid token
+    invalid_result = security.verify_password_reset_token("invalid_token")
+    print(f"Invalid token result: {invalid_result}")
+    
+    success = (
+        verified_email == email
+        and invalid_result is None
+    )
+    
+    if success:
+        print("✅ Password reset token test passed!")
+    else:
+        print("❌ Password reset token test failed!")
+    
+    return success
+
+
 def test_jwt_tokens():
     """Test JWT token creation and validation."""
     print("\n🎫 Testing JWT Tokens...")
@@ -201,6 +232,7 @@ def main():
         test_configuration,
         test_password_hashing,
         test_jwt_tokens,
+        test_password_reset_tokens,
         test_user_models,
         test_basic_app_structure,
     ]

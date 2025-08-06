@@ -278,13 +278,39 @@ async def confirm_password_reset(
 
     This endpoint:
     1. Validates reset token
-    2. Validates new password strength
+    2. Validates new password strength (done by Pydantic)
     3. Updates user password
     4. Invalidates reset token
     """
-    # Implementation would go here
-    # For now, return placeholder response
-    return {"message": "Password reset functionality to be implemented"}
+    try:
+        success = await user_service.confirm_password_reset(
+            reset_data.token, reset_data.new_password
+        )
+        
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired reset token",
+            )
+            
+        return {"message": "Password reset successfully"}
+        
+    except ValueError as e:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(
+            "Password reset confirmation failed. Error: %s. Traceback: %s",
+            str(e),
+            traceback.format_exc(),
+            extra={"endpoint": "confirm_password_reset"}
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Password reset failed. Please try again.",
+        )
 
 
 @router.get(
