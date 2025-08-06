@@ -305,8 +305,8 @@ class UserService:
         In production, use a proper email service like SendGrid or AWS SES.
         """
         if not all([settings.SMTP_HOST, settings.SMTP_USER, settings.SMTP_PASSWORD]):
-            # Email not configured - log the email content for development
-            print(f"Email to {to_email}: {subject}\n{body}")
+            # Email not configured - log only non-sensitive metadata for development
+            print(f"Email to {to_email}: {subject} [body redacted]")
             return True
 
         try:
