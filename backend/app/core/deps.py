@@ -24,7 +24,6 @@ from app.models.auth import UserRole, UserStatus
 from app.services.user import UserService
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jose import JWTError
 
 # Security scheme for OpenAPI documentation
 security_scheme = HTTPBearer()

@@ -21,8 +21,7 @@ from typing import Any, Dict, Optional
 
 import jwt
 from app.core.config import settings
-from passlib.context import CryptContext
-from passlib.exc import InvalidTokenError
+from passlib.context import CryptContext 
 
  
 pwd_context = CryptContext(
