@@ -122,7 +122,15 @@ class UserRegister(BaseModel):
 
 
 class TokenResponse(BaseModel):
+    """
+    JWT token response structure returned after successful authentication.
 
+    Fields:
+        access_token (str): The JWT access token for authenticating API requests.
+        refresh_token (str): The token used to obtain a new access token when the current one expires.
+        token_type (str): The type of token issued (typically "bearer").
+        expires_in (int): Access token expiry duration in seconds.
+    """
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
