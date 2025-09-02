@@ -64,13 +64,6 @@ class ConnectionManager:
                 await self.provider.unsubscribe([symbol])
             logger.info(f"Unsubscribed {websocket.client} from {symbol}")
 
-    async def broadcast_ticks(self):
-        async for tick in self.provider.stream():
-            symbol = tick.get("symbol")
-            if symbol in self.subscriptions:
-                message = json.dumps(tick)
-                for connection in self.subscriptions[symbol]:
-                    try:
-                        await connection.send_text(message)
                     except Exception as e:
+                        self.disconnect(connection)
                         logger.error(f"Error sending to {connection.client}: {e}")
