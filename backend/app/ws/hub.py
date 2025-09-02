@@ -64,6 +64,3 @@ class ConnectionManager:
                 await self.provider.unsubscribe([symbol])
             logger.info(f"Unsubscribed {websocket.client} from {symbol}")
 
-                    except Exception as e:
-                        self.disconnect(connection)
-                        logger.error(f"Error sending to {connection.client}: {e}")
