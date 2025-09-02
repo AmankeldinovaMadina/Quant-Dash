@@ -24,8 +24,8 @@ class ConnectionManager:
         self.active_connections.append(websocket)
         logger.info(f"New WebSocket connection: {websocket.client}")
 
-    def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
         for symbol in list(self.subscriptions.keys()):
             if websocket in self.subscriptions[symbol]:
                 self.subscriptions[symbol].remove(websocket)
