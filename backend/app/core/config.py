@@ -50,7 +50,6 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-
     # Database
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
@@ -80,9 +79,11 @@ class Settings(BaseSettings):
 
     # Redis (for caching and rate limiting)
     REDIS_URL: str = "redis://localhost:6379"
-    
+
     # Rate Limiting Security Configuration
-    RATE_LIMIT_FAIL_OPEN: bool = False  # True = fail open (allow requests), False = fail closed (reject requests)
+    RATE_LIMIT_FAIL_OPEN: bool = (
+        False  # True = fail open (allow requests), False = fail closed (reject requests)
+    )
     RATE_LIMIT_STRICT_MODE: bool = True  # Extra strict mode for financial applications
 
     class Config:
