@@ -51,8 +51,7 @@ class FinnhubService(MarketProvider):
         if not self.api_key:
             raise FinnhubError("Finnhub API key is required")
 
-        self.session: Optional[aiohttp.ClientSession] = None
-        self.ws_connection: Optional[websockets.WebSocketServerProtocol] = None
+        self.ws_connection: Optional[websockets.WebSocketClientProtocol] = None
 
     async def __aenter__(self):
         """Async context manager entry."""
