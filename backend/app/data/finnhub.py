@@ -94,8 +94,46 @@ class FinnhubService(MarketProvider):
             except Exception as e:
                 logger.error(f"Failed to unsubscribe from {symbol}: {str(e)}")
 
-    async def get_history(self, symbol: str, resolution: str, from_ts: int, to_ts: int) -> List[Dict]:
-        """Get historical candle data for a stock."""
+    async def get_history(self, symbol: str, interval: str, limit: int) -> List[Dict]:
+        """Get historical candle data for a stock.
+
+        Args:
+            symbol: Stock symbol.
+            interval: Candle interval (e.g., '1m', '5m', '15m', '1h', '1d').
+            limit: Number of candles to retrieve.
+
+        Returns:
+            List of candle data dictionaries.
+        """
+        # Map interval to Finnhub resolution
+        resolution_map = {
+            "1m": "1",
+            "5m": "5",
+            "15m": "15",
+            "30m": "30",
+            "1h": "60",
+            "1d": "D",
+            "1w": "W",
+            "1M": "M",
+        }
+        resolution = resolution_map.get(interval, interval)
+
+        # Calculate from_ts and to_ts
+        now = int(datetime.utcnow().timestamp())
+        # Determine seconds per interval
+        interval_seconds_map = {
+            "1m": 60,
+            "5m": 300,
+            "15m": 900,
+            "30m": 1800,
+            "1h": 3600,
+            "1d": 86400,
+            "1w": 604800,
+            "1M": 2592000,
+        }
+        seconds_per_interval = interval_seconds_map.get(interval, 60)
+        from_ts = now - (limit * seconds_per_interval)
+        to_ts = now
         return await self.get_candles(symbol, resolution, from_ts, to_ts)
 
     async def stream(self) -> AsyncIterator[Dict]:
