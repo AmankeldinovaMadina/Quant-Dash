@@ -183,7 +183,7 @@ class RateLimiter:
 
     Essential for preventing brute force attacks on login endpoints.
     Uses Redis with sliding window algorithm for distributed rate limiting.
-    
+
     Security considerations:
     - For financial applications, rate limiting failures should "fail closed"
     - Critical security endpoints reject requests when rate limiting is unavailable
@@ -262,7 +262,10 @@ class RateLimiter:
                 logger.error(
                     "Rate limiting error (allowing request due to fail_open_on_error=True): %s. "
                     "Key: %s, Limit: %d, Window: %ds",
-                    str(e), key, limit, window_seconds
+                    str(e),
+                    key,
+                    limit,
+                    window_seconds,
                 )
                 return True
             else:
@@ -271,7 +274,10 @@ class RateLimiter:
                     "Rejecting request for security (fail closed). "
                     "Error: %s, Key: %s, Limit: %d, Window: %ds. "
                     "This indicates a critical infrastructure issue that must be resolved immediately.",
-                    str(e), key, limit, window_seconds
+                    str(e),
+                    key,
+                    limit,
+                    window_seconds,
                 )
                 raise RateLimitError(
                     "Rate limiting service error. Request rejected for security."
@@ -299,7 +305,7 @@ def get_redis_client():
 def get_rate_limiter_strict(redis_client=Depends(get_redis_client)) -> RateLimiter:
     """
     Get rate limiter for security-critical endpoints (fail closed).
-    
+
     Used for login, registration, and other authentication endpoints.
     Rejects requests if Redis is unavailable to maintain security.
     """
@@ -309,12 +315,12 @@ def get_rate_limiter_strict(redis_client=Depends(get_redis_client)) -> RateLimit
 def get_rate_limiter_permissive(redis_client=Depends(get_redis_client)) -> RateLimiter:
     """
     Get rate limiter for non-critical endpoints (fail open).
-    
+
     Used for general API endpoints where availability is more important
     than strict rate limiting.
     """
     # Use configuration setting, but default to fail open for non-critical endpoints
-    fail_open = getattr(settings, 'RATE_LIMIT_FAIL_OPEN', True)
+    fail_open = getattr(settings, "RATE_LIMIT_FAIL_OPEN", True)
     return RateLimiter(redis_client=redis_client, fail_open_on_error=fail_open)
 
 
@@ -322,10 +328,12 @@ def get_rate_limiter_permissive(redis_client=Depends(get_redis_client)) -> RateL
 def get_rate_limiter(redis_client=Depends(get_redis_client)) -> RateLimiter:
     """
     Get rate limiter with default security settings.
-    
+
     For financial applications, defaults to strict mode (fail closed).
     """
-    fail_open = False if settings.RATE_LIMIT_STRICT_MODE else settings.RATE_LIMIT_FAIL_OPEN
+    fail_open = (
+        False if settings.RATE_LIMIT_STRICT_MODE else settings.RATE_LIMIT_FAIL_OPEN
+    )
     return RateLimiter(redis_client=redis_client, fail_open_on_error=fail_open)
 
 

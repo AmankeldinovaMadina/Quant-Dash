@@ -91,3 +91,9 @@ celerybeat-schedule
 
 # Redis dump file
 dump.rdb
+
+# Ignore git files
+.git/
+
+# Documentation and Markdown files
+Plan-checklist.md
