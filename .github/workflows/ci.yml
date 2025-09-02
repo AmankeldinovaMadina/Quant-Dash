@@ -26,14 +26,13 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
-          # cache keys based on files at the repo root (where requirements-dev.txt lives)
           cache-dependency-path: |
-            requirements*.txt
+            backend/requirements*.txt   # cache keys from backend files
 
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r ../requirements-dev.txt   # root file
+          pip install -r ../requirements-dev.txt   # <-- root file
 
       - name: Lint with flake8
         run: |
@@ -65,7 +64,9 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci   # deterministic installs from lockfile
+        run: npm ci
 
       - name: Run tests
         run: npm test --silent
+        env:
+          CI: true
