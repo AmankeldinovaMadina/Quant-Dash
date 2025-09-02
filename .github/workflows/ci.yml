@@ -3,9 +3,9 @@ name: Quant-Dash CI
 # 1. Trigger the workflow on push and pull request events
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   # 2. Define the backend job
