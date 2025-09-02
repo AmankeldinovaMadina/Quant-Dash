@@ -42,9 +42,12 @@ async def websocket_endpoint(websocket: WebSocket):
         while True:
             data = await websocket.receive_text()
             await connection_manager.handle_message(websocket, data)
-    except Exception as e:
-        # Handle client disconnects and other errors
+    except WebSocketDisconnect:
+        # Client disconnected, which is an expected event.
         pass
+    except Exception as e:
+        # Log other unexpected errors for debugging.
+        print(f"WebSocket error for client {websocket.client}: {e}")
     finally:
         connection_manager.disconnect(websocket)
 
