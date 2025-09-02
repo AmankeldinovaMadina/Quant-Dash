@@ -16,7 +16,7 @@ try:
     if settings.FINNHUB_API_KEY:
         print(f"✅ API Key starts with: {settings.FINNHUB_API_KEY[:10]}...")
 
-    from app.services.finnhub import FinnhubService
+    from app.data.finnhub import FinnhubService
 
     print(f"✅ FinnhubService imported successfully")
 
