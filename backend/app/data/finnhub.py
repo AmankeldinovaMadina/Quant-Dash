@@ -239,7 +239,7 @@ class FinnhubService(MarketProvider):
             logger.error(f"Failed to fetch candles for {symbol}: {str(e)}")
             raise FinnhubError(f"Failed to fetch candles: {str(e)}")
 
-    async def connect_websocket(self) -> websockets.WebSocketServerProtocol:
+    async def connect_websocket(self) -> websockets.WebSocketClientProtocol:
         """
         Connect to Finnhub WebSocket for real-time data.
 
