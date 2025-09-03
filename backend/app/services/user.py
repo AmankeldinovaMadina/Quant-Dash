@@ -407,10 +407,10 @@ class UserService:
         if not token_data:
             return False
 
-            return (
-                token_data["token_hash"] == token_hash
-                and token_data["expires_at"] > datetime.utcnow()
-            )
+        return (
+            token_data["token_hash"] == token_hash
+            and token_data["expires_at"] > datetime.utcnow()
+        )
 
     # Development/debugging methods
     async def get_all_users(self) -> Dict[str, Any]:
