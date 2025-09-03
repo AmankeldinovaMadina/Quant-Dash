@@ -23,11 +23,10 @@ import jwt
 from app.core.config import settings
 from passlib.context import CryptContext
 
- 
 pwd_context = CryptContext(
     schemes=settings.PWD_CONTEXT_SCHEMES,
     deprecated=settings.PWD_CONTEXT_DEPRECATED,
-    bcrypt__rounds=12,  
+    bcrypt__rounds=12,
 )
 
 
@@ -45,7 +44,7 @@ class SecurityManager:
     def create_access_token(
         data: Dict[str, Any], expires_delta: Optional[timedelta] = None
     ) -> str:
- 
+
         to_encode = data.copy()
 
         if expires_delta:
@@ -55,7 +54,6 @@ class SecurityManager:
                 minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES
             )
 
-         
         to_encode.update(
             {
                 "exp": expire,
@@ -139,7 +137,7 @@ class SecurityManager:
                 audience=settings.JWT_AUDIENCE,
                 issuer=settings.JWT_ISSUER,
             )
- 
+
             if payload.get("type") != expected_type:
                 return None
 
@@ -178,10 +176,10 @@ class SecurityManager:
     def create_password_reset_token(self, email: str) -> str:
         """
         Create a password reset token with expiration.
-        
+
         Args:
             email: User email address
-            
+
         Returns:
             JWT token containing email and expiration
         """
@@ -192,14 +190,12 @@ class SecurityManager:
             "iat": datetime.utcnow(),
             "iss": settings.JWT_ISSUER,
             "aud": settings.JWT_AUDIENCE,
-            "type": "password_reset"
+            "type": "password_reset",
         }
-        
+
         try:
             return jwt.encode(
-                to_encode,
-                settings.SECRET_KEY,
-                algorithm=settings.JWT_ALGORITHM
+                to_encode, settings.SECRET_KEY, algorithm=settings.JWT_ALGORITHM
             )
         except Exception as e:
             raise ValueError(f"Failed to create password reset token: {str(e)}")
@@ -207,10 +203,10 @@ class SecurityManager:
     def verify_password_reset_token(self, token: str) -> Optional[str]:
         """
         Verify and decode password reset token.
-        
+
         Args:
             token: JWT password reset token
-            
+
         Returns:
             Email address if token is valid, None otherwise
         """
@@ -221,19 +217,19 @@ class SecurityManager:
                 algorithms=[settings.JWT_ALGORITHM],
                 audience=settings.JWT_AUDIENCE,
                 issuer=settings.JWT_ISSUER,
-                options={"verify_exp": True}
+                options={"verify_exp": True},
             )
-            
+
             # Verify token type
             if payload.get("type") != "password_reset":
                 return None
-                
+
             email = payload.get("sub")
             if not email:
                 return None
-                
+
             return email
-            
+
         except jwt.ExpiredSignatureError:
             # Token has expired
             return None
@@ -242,10 +238,10 @@ class SecurityManager:
             return None
 
     @staticmethod
-    def generate_reset_token() -> str: 
+    def generate_reset_token() -> str:
         """
         DEPRECATED: Use create_password_reset_token instead.
-        
+
         This method is kept for backward compatibility but should be replaced
         with create_password_reset_token for proper expiration handling.
         """

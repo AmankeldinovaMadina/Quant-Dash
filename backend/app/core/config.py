@@ -50,7 +50,6 @@ class Settings(BaseSettings):
             return v
         raise ValueError(v)
 
-
     # Database
     POSTGRES_SERVER: str = "localhost"
     POSTGRES_USER: str = "postgres"
@@ -74,15 +73,18 @@ class Settings(BaseSettings):
     EMAILS_FROM_NAME: Optional[str] = None
 
     # API Keys for market data
+    FINNHUB_API_KEY: Optional[str] = None
     ALPHA_VANTAGE_API_KEY: Optional[str] = None
     POLYGON_API_KEY: Optional[str] = None
     IEX_CLOUD_API_KEY: Optional[str] = None
 
     # Redis (for caching and rate limiting)
     REDIS_URL: str = "redis://localhost:6379"
-    
+
     # Rate Limiting Security Configuration
-    RATE_LIMIT_FAIL_OPEN: bool = False  # True = fail open (allow requests), False = fail closed (reject requests)
+    RATE_LIMIT_FAIL_OPEN: bool = (
+        False  # True = fail open (allow requests), False = fail closed (reject requests)
+    )
     RATE_LIMIT_STRICT_MODE: bool = True  # Extra strict mode for financial applications
 
     class Config:

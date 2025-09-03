@@ -79,7 +79,7 @@ async def register(user_data: UserRegister, user_service: UserService = Depends(
             user_data.email,
             str(e),
             traceback.format_exc(),
-            extra={"endpoint": "register", "user_email": user_data.email}
+            extra={"endpoint": "register", "user_email": user_data.email},
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -94,7 +94,9 @@ async def register(user_data: UserRegister, user_service: UserService = Depends(
     summary="User login",
     description="Authenticate user and return access and refresh tokens",
 )
-async def login(login_data: UserLogin, request: Request, user_service: UserService = Depends()):
+async def login(
+    login_data: UserLogin, request: Request, user_service: UserService = Depends()
+):
     """
     Authenticate user and return tokens.
 
@@ -119,8 +121,8 @@ async def login(login_data: UserLogin, request: Request, user_service: UserServi
                     "event_type": "authentication_failure",
                     "email": login_data.email,
                     "client_ip": request.client.host,
-                    "user_agent": request.headers.get("user-agent", "")[:100]
-                }
+                    "user_agent": request.headers.get("user-agent", "")[:100],
+                },
             )
             # Generic error message to prevent user enumeration
             raise HTTPException(
@@ -141,7 +143,7 @@ async def login(login_data: UserLogin, request: Request, user_service: UserServi
             login_data.email,
             str(e),
             traceback.format_exc(),
-            extra={"endpoint": "login", "user_email": login_data.email}
+            extra={"endpoint": "login", "user_email": login_data.email},
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -179,7 +181,7 @@ async def refresh_token(
             "Token refresh failed. Error: %s. Traceback: %s",
             str(e),
             traceback.format_exc(),
-            extra={"endpoint": "refresh_token"}
+            extra={"endpoint": "refresh_token"},
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -221,7 +223,7 @@ async def verify_email(
             verification_data.token[:20] + "...",  # Log partial token for debugging
             str(e),
             traceback.format_exc(),
-            extra={"endpoint": "verify_email"}
+            extra={"endpoint": "verify_email"},
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -259,7 +261,10 @@ async def request_password_reset(
             reset_data.email,
             str(e),
             traceback.format_exc(),
-            extra={"endpoint": "request_password_reset", "user_email": reset_data.email}
+            extra={
+                "endpoint": "request_password_reset",
+                "user_email": reset_data.email,
+            },
         )
         # Still return success message to prevent email enumeration
         return {"message": "If the email exists, a password reset link has been sent"}
@@ -286,26 +291,23 @@ async def confirm_password_reset(
         success = await user_service.confirm_password_reset(
             reset_data.token, reset_data.new_password
         )
-        
+
         if not success:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired reset token",
             )
-            
+
         return {"message": "Password reset successfully"}
-        
+
     except ValueError as e:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e)
-        )
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         logger.error(
             "Password reset confirmation failed. Error: %s. Traceback: %s",
             str(e),
             traceback.format_exc(),
-            extra={"endpoint": "confirm_password_reset"}
+            extra={"endpoint": "confirm_password_reset"},
         )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
