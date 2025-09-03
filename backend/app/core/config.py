@@ -73,6 +73,7 @@ class Settings(BaseSettings):
     EMAILS_FROM_NAME: Optional[str] = None
 
     # API Keys for market data
+    FINNHUB_API_KEY: Optional[str] = None
     ALPHA_VANTAGE_API_KEY: Optional[str] = None
     POLYGON_API_KEY: Optional[str] = None
     IEX_CLOUD_API_KEY: Optional[str] = None

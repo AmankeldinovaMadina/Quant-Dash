@@ -5,7 +5,7 @@ from app.api.v1 import api_router
 from app.core.config import settings
 from app.data.finnhub import FinnhubService
 from app.ws.hub import ConnectionManager
-from fastapi import FastAPI, WebSocket, WebSocketDisconnectError
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(
@@ -71,7 +71,7 @@ async def websocket_endpoint(websocket: WebSocket):
         # Log other unexpected errors for debugging.
         print(f"WebSocket error for client {websocket.client}: {e}")
     finally:
-        connection_manager.disconnect(websocket)
+        await connection_manager.disconnect(websocket)
 
 
 @app.get("/")
