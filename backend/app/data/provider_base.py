@@ -1,6 +1,7 @@
 """
 Base classes and protocols for market data providers.
 """
+
 from typing import AsyncIterator, Dict, List, Protocol
 
 

@@ -1,6 +1,7 @@
 """
 WebSocket protocol schemas.
 """
+
 from pydantic import BaseModel, Field
 
 

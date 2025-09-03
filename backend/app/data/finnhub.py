@@ -13,8 +13,8 @@ Finnhub API Documentation: https://finnhub.io/docs/api
 import asyncio
 import json
 import logging
-from typing import AsyncIterator, Dict, List, Optional, Any
 from datetime import datetime
+from typing import Any, AsyncIterator, Dict, List, Optional
 
 import aiohttp
 import websockets
@@ -157,6 +157,52 @@ class FinnhubService(MarketProvider):
         except Exception as e:
             logger.error(f"Error during WebSocket streaming: {e}")
             raise FinnhubError(f"WebSocket stream error: {e}")
+
+    async def _make_request(
+        self, endpoint: str, params: Dict[str, Any] = None
+    ) -> Dict[str, Any]:
+        """
+        Make HTTP request to Finnhub API.
+
+        Args:
+            endpoint: API endpoint (without base URL)
+            params: Query parameters
+
+        Returns:
+            JSON response as dictionary
+
+        Raises:
+            FinnhubError: If API request fails
+        """
+        if not self.session:
+            timeout = aiohttp.ClientTimeout(total=30, connect=10)
+            self.session = aiohttp.ClientSession(timeout=timeout)
+
+        url = f"{self.BASE_URL}{endpoint}"
+        params = params or {}
+        params["token"] = self.api_key
+
+        try:
+            async with self.session.get(url, params=params) as response:
+                if response.status == 200:
+                    data = await response.json()
+                    return data
+                elif response.status == 429:
+                    raise FinnhubError(
+                        "Rate limit exceeded. Please wait before making more requests."
+                    )
+                elif response.status == 401:
+                    raise FinnhubError("Invalid API key")
+                else:
+                    error_text = await response.text()
+                    raise FinnhubError(
+                        f"API request failed with status {response.status}: {error_text}"
+                    )
+
+        except aiohttp.ClientError as e:
+            raise FinnhubError(f"Network error: {str(e)}")
+        except json.JSONDecodeError as e:
+            raise FinnhubError(f"Invalid JSON response: {str(e)}")
 
     async def get_countries(self) -> List[Dict[str, str]]:
         """

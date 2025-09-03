@@ -1,14 +1,14 @@
 """
 WebSocket Hub for real-time communication.
 """
+
 import asyncio
 import json
 import logging
 from typing import Dict, List, Set
 
-from fastapi import WebSocket
-
 from app.data.provider_base import MarketProvider
+from fastapi import WebSocket
 
 logger = logging.getLogger(__name__)
 
